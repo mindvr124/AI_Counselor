@@ -29,20 +29,20 @@ engine = create_engine(
 
 def load_counselor(counselor_id):
     """
-    상담사 ID로 상담사 정보를 조회하는 함수
+    상담가 ID로 상담가 정보를 조회하는 함수
     
     Args:
-        counselor_id (str): 상담사 ID
+        counselor_id (str): 상담가 ID
         
     Returns:
-        dict: 상담사 정보가 담긴 딕셔너리 또는 None
+        dict: 상담가 정보가 담긴 딕셔너리 또는 None
     """
     query = text("SELECT * FROM mindvr.counselor WHERE id = :id")
     
     with engine.begin() as conn:
         result = conn.execute(query, {"id": counselor_id})
         row = result.fetchone()
-        
+
         if row:
             # 컬럼명과 매핑하여 딕셔너리로 반환
             return {
@@ -55,6 +55,7 @@ def load_counselor(counselor_id):
                 'tone': row[6],         # personality (맞춤) - 클라이언트에서 tone으로 사용
                 'method': row[7],       # method (전문 분야)
                 'specialty': row[8],    # tone (생담 방법) - 클라이언트에서 specialty로 사용
+                'prompt': row[9],       # prompt 
             }
         else:
             return None
@@ -125,6 +126,74 @@ def generate_summary(llm, history, summary_text):
 # #############################################
 # DB Save 함수
 # #############################################
+def save_counselor(counselor_data):
+    """
+    상담가 정보를 저장하는 함수
+
+    Args:
+        counselor_data (dict): 상담가 정보가 담긴 딕셔너리
+
+    Returns:
+        dict: 저장 결과 정보가 담긴 딕셔너리 또는 Fail
+    """
+    try:
+        exist = load_counselor(counselor_data['id'])
+        
+        if exist:
+            # UPDATE 쿼리
+            query = text("""
+                UPDATE mindvr.counselor
+                SET 
+                    name = :name,
+                    gender = :gender,
+                    age_group = :age,
+                    mbti = :personality,
+                    career = :career,
+                    personality = :tone,
+                    method = :method,
+                    tone = :specialty,
+                    prompt = :prompt
+                WHERE id = :id
+            """)
+        else:
+            # INSERT 쿼리
+            query = text("""
+                INSERT INTO mindvr.counselor (
+                    id, name, gender, age_group, mbti, career, personality, method, tone, prompt
+                ) VALUES (
+                    :id, :name, :gender, :age, :personality, :career, :tone, :method, :specialty, prompt
+                )
+            """)
+
+        with engine.begin() as conn:
+            result = conn.execute(query, {
+                "id": counselor_data['id'],
+                "name": counselor_data['name'],
+                "gender": counselor_data['gender'],
+                "age": counselor_data['age'],           # age -> age_group
+                "personality": counselor_data['personality'],  # personality -> mbti
+                "career": counselor_data['career'],
+                "tone": counselor_data['tone'],         # tone -> personality
+                "method": counselor_data['method'],
+                "specialty": counselor_data['specialty'],  # specialty -> tone
+                "prompt": counselor_data['prompt']
+            })
+
+        return {
+            'success': True,
+            'message': '상담가 정보가 성공적으로 저장되었습니다.',
+            'counselor_id': counselor_data['id'],
+            'affected_rows': result.rowcount
+        }
+
+    except Exception as e:
+        return {
+            'success': False,
+            'message': f'상담가 정보 저장 중 오류가 발생했습니다: {str(e)}',
+            'error': str(e)
+        }
+
+
 #----------------------------------------------
 # 모든 상담 내용 저장 함수
 #----------------------------------------------
@@ -179,7 +248,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         print("❌ 연결 종료됨")
         if self.chat_history and self.user_id:
             full_history = "\n".join(
-                [f"사용자: {item['user']}\n상담사: {item['response']}" for item in self.chat_history]
+                [f"사용자: {item['user']}\n상담가: {item['response']}" for item in self.chat_history]
             )
             if self.llm:
                 summary_response = await generate_summary(self.llm, full_history, self.summary_text)
@@ -192,28 +261,34 @@ class ChatConsumer(AsyncWebsocketConsumer):
             msg_type = data.get("type")
             print(f"📨 수신된 메시지 타입: {msg_type}")
 
-            # 상담사 정보 조회 요청
+            # 상담가 정보 조회 요청
             if msg_type == "load_counselor":
                 counselor_id = data.get("id")
+                print(f"🔍 조회할 상담가 ID: {counselor_id}")
+                
                 counselor_info = load_counselor(counselor_id)
-
-                if counselor_info:
+                print(f"📋 조회 결과: {counselor_info}")
+                print(f"📋 결과 타입: {type(counselor_info)}")
+                
+                if counselor_info is not None:  # 더 명확한 None 체크
+                    print("✅ 상담가 정보 전송")
                     await self.send(text_data=json.dumps({
                         "type": "counselor_info",
-                        "data": counselor_info
+                        "payload": counselor_info
                     }))
                 else:
+                    print("❌ 상담가 정보 없음 - 에러 전송")
                     await self.send(text_data=json.dumps({
                         "type": "error",
-                        "message": "해당 ID의 상담사를 찾을 수 없습니다."
+                        "message": "해당 ID의 상담를 찾을 수 없습니다."
                     }))
                 return
 
             # 메시지 전송 처리
             elif msg_type == "send_message":
                 user_input = data.get("message")
-                model = data.get("apiSettings", {}).get("model", "gpt-4")
-                temperature = data.get("apiSettings", {}).get("temperature", 0.7)
+                model = data.get("apiSettings", {}).get("model", "gpt-4o")
+                temperature = data.get("apiSettings", {}).get("temperature", 0.2)
                 system_prompt = data.get("systemPrompt", "")
                 message_history = data.get("messageHistory", [])
                 
@@ -234,7 +309,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     if msg['type'] == 'user':
                         history += f"사용자: {msg['content']}\n"
                     elif msg['type'] == 'ai':
-                        history += f"상담사: {msg['content']}\n"
+                        history += f"상담가: {msg['content']}\n"
                 
                 # 프롬프트 템플릿 구성
                 prompt_template = PromptTemplate(
@@ -249,7 +324,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     {history}
                     
                     사용자: {user_input}
-                    상담사:
+                    상담가:
                     """
                 )
                 
@@ -293,7 +368,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     summary_response = await generate_summary(
                         self.llm,
                         "\n".join(
-                            [f"사용자: {item['user']}\n상담사: {item['response']}" for item in self.chat_history]
+                            [f"사용자: {item['user']}\n상담가: {item['response']}" for item in self.chat_history]
                         ),
                         self.summary_text
                     )
@@ -302,13 +377,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 
                 return
 
-            # 상담사 정보 저장 요청
+            # 상담가 정보 저장 요청
             elif msg_type == "save_counselor":
                 counselor_data = data.get("data", {})
-                # 여기에 상담사 정보 저장 로직 추가
-                await self.send(text_data=json.dumps({
-                    "type": "save_success"
-                }))
+                result = save_counselor(counselor_data)
+                if result["success"]:
+                    await self.send(text_data=json.dumps({
+                        "type": "save_success" if result["success"] else "save_error",
+                        "message": result["message"]
+                    }))
+                else:
+                    await self.send(text_data=json.dumps({
+                        "type": "save_error",
+                        "message": result["message"]
+                    }))
                 return
 
         except Exception as e:
