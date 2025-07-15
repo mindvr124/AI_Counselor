@@ -88,7 +88,7 @@ const AICounselor = () => {
     if (socket) socket.close();
     setConnectionStatus('connecting');
 
-    const ws = new WebSocket('wss://prompt-test-server.onrender.com/ws');
+    const ws = new WebSocket('wss://ai-counselor-backend.onrender.com/ws');
     ws.onopen = () => {
       setConnectionStatus('connected');
       setIsConnected(true);
