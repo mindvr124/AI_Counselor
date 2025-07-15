@@ -12,8 +12,10 @@ const ApiSettingsForm = ({ apiSettings, setApiSettings }) => {
           onChange={(e) => setApiSettings({ ...apiSettings, model: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-md"
         >
-          <option value="gpt-4">GPT-4</option>
-          <option value="gpt-4-turbo">GPT-4 Turbo</option>
+          <option value="gpt-4o">GPT-4o</option>
+          <option value="gpt-4o-mini">GPT-4o-mini</option>
+          <option value="gpt-4.1">GPT-4.1</option>
+          <option value="gpt-4.1-turbo">GPT-4.1 Turbo</option>
           <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
         </select>
       </div>

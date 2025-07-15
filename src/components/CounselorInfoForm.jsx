@@ -1,6 +1,11 @@
 import React from 'react';
 
 const CounselorInfoForm = ({ counselorInfo, setCounselorInfo, loadCounselorInfo, isConnected }) => {
+  // // counselorInfo가 undefined인 경우 처리
+  // if (!counselorInfo || !counselorInfo.id) {
+  //   return <div>상담사 정보를 불러오지 못했습니다. ID를 입력하고 '로드'를 눌러주세요.</div>;
+  // }
+
   return (
     <div className="space-y-4">
       {/* 상담가 ID */}
@@ -9,7 +14,7 @@ const CounselorInfoForm = ({ counselorInfo, setCounselorInfo, loadCounselorInfo,
         <div className="flex space-x-2">
           <input
             type="text"
-            value={counselorInfo.id}
+            value={counselorInfo.id || ''}
             onChange={(e) => setCounselorInfo({ ...counselorInfo, id: e.target.value })}
             className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
             placeholder="상담가 ID 입력"
@@ -29,7 +34,7 @@ const CounselorInfoForm = ({ counselorInfo, setCounselorInfo, loadCounselorInfo,
         <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
         <input
           type="text"
-          value={counselorInfo.name}
+          value={counselorInfo.name || ''}
           onChange={(e) => setCounselorInfo({ ...counselorInfo, name: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-md"
         />
@@ -40,7 +45,7 @@ const CounselorInfoForm = ({ counselorInfo, setCounselorInfo, loadCounselorInfo,
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">성별</label>
           <select
-            value={counselorInfo.gender}
+            value={counselorInfo.gender || ''}
             onChange={(e) => setCounselorInfo({ ...counselorInfo, gender: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
           >
@@ -54,7 +59,7 @@ const CounselorInfoForm = ({ counselorInfo, setCounselorInfo, loadCounselorInfo,
           <label className="block text-sm font-medium text-gray-700 mb-1">나이</label>
           <input
             type="text"
-            value={counselorInfo.age}
+            value={counselorInfo.age || ''}
             onChange={(e) => setCounselorInfo({ ...counselorInfo, age: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
           />
@@ -65,7 +70,7 @@ const CounselorInfoForm = ({ counselorInfo, setCounselorInfo, loadCounselorInfo,
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">성격</label>
         <textarea
-          value={counselorInfo.personality}
+          value={counselorInfo.personality || ''}
           onChange={(e) => setCounselorInfo({ ...counselorInfo, personality: e.target.value })}
           rows="2"
           className="w-full px-3 py-2 border border-gray-300 rounded-md"
@@ -78,7 +83,7 @@ const CounselorInfoForm = ({ counselorInfo, setCounselorInfo, loadCounselorInfo,
         <label className="block text-sm font-medium text-gray-700 mb-1">말투</label>
         <input
           type="text"
-          value={counselorInfo.tone}
+          value={counselorInfo.tone || ''}
           onChange={(e) => setCounselorInfo({ ...counselorInfo, tone: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-md"
           placeholder="예: 따뜻하고 친근한, 전문적이고 차분한"
@@ -90,7 +95,7 @@ const CounselorInfoForm = ({ counselorInfo, setCounselorInfo, loadCounselorInfo,
         <label className="block text-sm font-medium text-gray-700 mb-1">전문 분야</label>
         <input
           type="text"
-          value={counselorInfo.specialty}
+          value={counselorInfo.specialty || ''}
           onChange={(e) => setCounselorInfo({ ...counselorInfo, specialty: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-md"
           placeholder="예: 우울증, 불안장애, 인간관계"
@@ -102,7 +107,7 @@ const CounselorInfoForm = ({ counselorInfo, setCounselorInfo, loadCounselorInfo,
         <label className="block text-sm font-medium text-gray-700 mb-1">경력</label>
         <input
           type="text"
-          value={counselorInfo.career}
+          value={counselorInfo.career || ''}
           onChange={(e) => setCounselorInfo({ ...counselorInfo, career: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-md"
           placeholder="예: 10년차 임상심리사"
@@ -113,7 +118,7 @@ const CounselorInfoForm = ({ counselorInfo, setCounselorInfo, loadCounselorInfo,
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">상담 방법</label>
         <textarea
-          value={counselorInfo.method}
+          value={counselorInfo.method || ''}
           onChange={(e) => setCounselorInfo({ ...counselorInfo, method: e.target.value })}
           rows="3"
           className="w-full px-3 py-2 border border-gray-300 rounded-md"
