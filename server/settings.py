@@ -39,8 +39,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'channels',
-    'aicounselor'
+    'aicounselor',
 ]
+
+ASGI_APPLICATION = 'server.asgi.application'
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -69,8 +71,6 @@ TEMPLATES = [
         },
     },
 ]
-
-ASGI_APPLICATION = "server.asgi.application"
 
 # Redis (channels layer)
 CHANNEL_LAYERS = {

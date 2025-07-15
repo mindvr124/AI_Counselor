@@ -1,0 +1,319 @@
+import json, os, asyncio
+from channels.generic.websocket import AsyncWebsocketConsumer
+from sqlalchemy import create_engine, text
+from langchain.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
+from langchain.callbacks.streaming_aiter import AsyncIteratorCallbackHandler
+from dotenv import load_dotenv
+
+load_dotenv()
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# #############################################
+# DB 연결 설정
+# #############################################
+user = os.getenv("DB_USER")
+password = os.getenv("DB_PASSWORD")
+host = os.getenv("SERVER_HOST")
+port = "3306"
+database = os.getenv("DB_NAME")
+
+# #############################################
+# DB Load 함수
+# #############################################
+# 엔진 생성
+engine = create_engine(
+        f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}?charset=utf8mb4"
+    )
+
+def load_counselor(counselor_id):
+    """
+    상담사 ID로 상담사 정보를 조회하는 함수
+    
+    Args:
+        counselor_id (str): 상담사 ID
+        
+    Returns:
+        dict: 상담사 정보가 담긴 딕셔너리 또는 None
+    """
+    query = text("SELECT * FROM mindvr.counselor WHERE id = :id")
+    
+    with engine.begin() as conn:
+        result = conn.execute(query, {"id": counselor_id})
+        row = result.fetchone()
+        
+        if row:
+            # 컬럼명과 매핑하여 딕셔너리로 반환
+            return {
+                'id': row[0],           # id
+                'name': row[1],         # name (이름)
+                'gender': row[2],       # gender (성별)
+                'age': row[3],          # age_group (나이) - 클라이언트에서 age로 사용
+                'personality': row[4],  # mbti (성격) - 클라이언트에서 personality로 사용
+                'career': row[5],       # career (경력)
+                'tone': row[6],         # personality (맞춤) - 클라이언트에서 tone으로 사용
+                'method': row[7],       # method (전문 분야)
+                'specialty': row[8],    # tone (생담 방법) - 클라이언트에서 specialty로 사용
+            }
+        else:
+            return None
+
+
+#----------------------------------------------
+# 사용자가 존재하는지 확인하는 함수
+#----------------------------------------------
+def ensure_user_exists(user_id):
+    check_query = text("SELECT COUNT(*) FROM user WHERE user_id = :user_id")
+    with engine.begin() as conn:
+        result = conn.execute(check_query, {"user_id": user_id})
+        count = result.scalar() # 첫 번째 행의 첫 번째 컬럼 값만 반환
+        print(f"사용자 ID : {user_id}")
+
+        # 사용자가 없으면 생성
+        if count == 0:
+            insert_user_query = text("INSERT INTO user (user_id) VALUES (:user_id)")
+            conn.execute(insert_user_query, {
+                "user_id": user_id
+            })
+            print(f"새 사용자 생성: {user_id}")
+
+#----------------------------------------------
+# 지난 상담 요약 내용 조회
+#----------------------------------------------
+def get_counsel_summary(user_id):
+    query = text("""
+        SELECT content 
+        FROM counsel_summary 
+        WHERE user_id = :user_id 
+        ORDER BY id DESC 
+        LIMIT 1
+    """)
+    with engine.begin() as conn:
+        result = conn.execute(query, {"user_id": user_id})
+        row = result.fetchone()
+        return row[0] if row else None
+    
+# #############################################
+# 요약 생성 함수
+# #############################################
+def generate_summary(llm, history, summary_text):
+    summary_template = PromptTemplate(
+        input_variables=["history", "summary_text"],
+        template="""
+        이전 요약 대화:
+        {summary_text}
+
+        -----------------
+        다음은 현재 진행중인 상담의 대화 기록입니다. 
+        사용자의 이름, 상담 이유와 그에 관련된 핵심 내용을 중복이 없도록 요약해 주세요.
+        이전 요약 대화에서 중요한 내용은 삭제하지 말고 덧붙여서 요약해주세요.
+
+        무의미한 대화나 인사만 있는 경우 요약하지 말고 받은 데이터를 그대로 보내주세요.
+        -----------------
+
+        실시간 대화:
+        {history}
+        """
+    )
+    summary_chain = summary_template | llm
+    return summary_chain.ainvoke({
+        "summary_text": summary_text,
+        "history": history
+    })
+    
+# #############################################
+# DB Save 함수
+# #############################################
+#----------------------------------------------
+# 모든 상담 내용 저장 함수
+#----------------------------------------------
+def save_counsel_history(user_id, user_input, answer):
+    query = text("INSERT INTO counsel_history (user_id, user_input, answer) VALUES (:user_id, :user_input, :answer)")
+    with engine.begin() as conn:  # 자동 commit 포함
+        conn.execute(query, {
+            "user_id": user_id,
+            "user_input": user_input,
+            "answer": answer
+        })
+
+#----------------------------------------------
+# 상담 요약 내용 저장 함수
+#----------------------------------------------
+def save_counsel_summary(user_id, content):
+    if len(content) < 30:
+        return 0
+    query = text("INSERT INTO counsel_summary (user_id, content) VALUES (:user_id, :content)")
+    with engine.begin() as conn:
+        conn.execute(query, {
+            "user_id": user_id,
+            "content": content
+        })
+
+
+# #############################################
+# 스트리밍 모델 생성 함수
+# #############################################
+def get_streaming_llm(model, temperature, callback):
+    return ChatOpenAI(
+        model=model,
+        temperature=temperature,
+        streaming=True,
+        callbacks=[callback],
+        openai_api_key=OPENAI_API_KEY
+    )
+
+class ChatConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.chat_history = []
+        self.summary_text = ""
+        self.user_id = None
+        self.llm = None
+
+    async def connect(self):
+        await self.accept()
+        print("🔌 Django WebSocket 연결됨")
+
+    async def disconnect(self, close_code):
+        print("❌ 연결 종료됨")
+        if self.chat_history and self.user_id:
+            full_history = "\n".join(
+                [f"사용자: {item['user']}\n상담사: {item['response']}" for item in self.chat_history]
+            )
+            if self.llm:
+                summary_response = await generate_summary(self.llm, full_history, self.summary_text)
+                self.summary_text = summary_response.content
+                save_counsel_summary(self.user_id, self.summary_text)
+
+    async def receive(self, text_data):
+        try:
+            data = json.loads(text_data)
+            msg_type = data.get("type")
+            print(f"📨 수신된 메시지 타입: {msg_type}")
+
+            # 상담사 정보 조회 요청
+            if msg_type == "load_counselor":
+                counselor_id = data.get("id")
+                counselor_info = load_counselor(counselor_id)
+
+                if counselor_info:
+                    await self.send(text_data=json.dumps({
+                        "type": "counselor_info",
+                        "data": counselor_info
+                    }))
+                else:
+                    await self.send(text_data=json.dumps({
+                        "type": "error",
+                        "message": "해당 ID의 상담사를 찾을 수 없습니다."
+                    }))
+                return
+
+            # 메시지 전송 처리
+            elif msg_type == "send_message":
+                user_input = data.get("message")
+                model = data.get("apiSettings", {}).get("model", "gpt-4")
+                temperature = data.get("apiSettings", {}).get("temperature", 0.7)
+                system_prompt = data.get("systemPrompt", "")
+                message_history = data.get("messageHistory", [])
+                
+                # 임시 user_id (실제로는 인증에서 가져와야 함)
+                self.user_id = "test_user"
+                
+                ensure_user_exists(self.user_id)
+                
+                # 메시지 시작 알림
+                await self.send(text_data=json.dumps({"type": "message_start"}))
+                
+                # 이전 요약 가져오기
+                summary_data = get_counsel_summary(self.user_id)
+                
+                # 대화 기록 구성
+                history = ""
+                for msg in message_history[-5:]:  # 최근 5개 메시지만
+                    if msg['type'] == 'user':
+                        history += f"사용자: {msg['content']}\n"
+                    elif msg['type'] == 'ai':
+                        history += f"상담사: {msg['content']}\n"
+                
+                # 프롬프트 템플릿 구성
+                prompt_template = PromptTemplate(
+                    input_variables=["system", "summary", "history", "user_input"],
+                    template="""
+                    {system}
+                    
+                    이전 상담 요약:
+                    {summary}
+                    
+                    최근 대화:
+                    {history}
+                    
+                    사용자: {user_input}
+                    상담사:
+                    """
+                )
+                
+                # 스트리밍 콜백 생성
+                callback = AsyncIteratorCallbackHandler()
+                self.llm = get_streaming_llm(model, temperature, callback)
+                chain = prompt_template | self.llm
+                
+                # 응답 생성 태스크 시작
+                response_task = asyncio.create_task(chain.ainvoke({
+                    "system": system_prompt,
+                    "summary": summary_data or "",
+                    "history": history,
+                    "user_input": user_input
+                }))
+                
+                # 스트리밍 응답 전송
+                full_response = ""
+                async for chunk in callback.aiter():
+                    await self.send(text_data=json.dumps({
+                        "type": "message_chunk",
+                        "content": chunk
+                    }))
+                    full_response += chunk
+                
+                # 응답 완료 대기
+                response_text = await response_task
+                
+                # 메시지 종료 알림
+                await self.send(text_data=json.dumps({"type": "message_end"}))
+                
+                # 대화 기록 저장
+                self.chat_history.append({
+                    "user": user_input,
+                    "response": response_text.content,
+                })
+                save_counsel_history(self.user_id, user_input, response_text.content)
+                
+                # 5개 메시지마다 요약 생성
+                if len(self.chat_history) % 5 == 0:
+                    summary_response = await generate_summary(
+                        self.llm,
+                        "\n".join(
+                            [f"사용자: {item['user']}\n상담사: {item['response']}" for item in self.chat_history]
+                        ),
+                        self.summary_text
+                    )
+                    self.summary_text = summary_response.content
+                    self.chat_history = []
+                
+                return
+
+            # 상담사 정보 저장 요청
+            elif msg_type == "save_counselor":
+                counselor_data = data.get("data", {})
+                # 여기에 상담사 정보 저장 로직 추가
+                await self.send(text_data=json.dumps({
+                    "type": "save_success"
+                }))
+                return
+
+        except Exception as e:
+            print(f"❌ 에러 발생: {e}")
+            await self.send(text_data=json.dumps({
+                "type": "error",
+                "message": str(e)
+            }))
