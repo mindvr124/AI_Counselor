@@ -396,7 +396,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "user": user_input,
                     "response": response_text.content,
                 })
-                save_counsel_history(self.user_id, user_input, response_text.content, self.counselor_info.id)
+                save_counsel_history(self.user_id, user_input, response_text.content, self.counselor_info["id"])
                 
                 # 5개 메시지마다 요약 생성
                 if len(self.chat_history) % 5 == 0:
