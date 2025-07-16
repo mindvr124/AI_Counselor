@@ -282,6 +282,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # 메시지 전송 처리
             elif msg_type == "send_message":
                 user_id = data.get("user_id")
+                self.user_id = user_id
                 user_input = data.get("message")
                 model = data.get("apiSettings", {}).get("model", "gpt-4o")
                 temperature = data.get("apiSettings", {}).get("temperature", 0.2)
