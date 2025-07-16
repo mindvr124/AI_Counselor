@@ -37,34 +37,16 @@ engine = create_engine(db_url)
 def load_counselor(counselor_id):
     """
     상담가 ID로 상담가 정보를 조회하는 함수
-    
-    Args:
-        counselor_id (str): 상담가 ID
-        
-    Returns:
-        dict: 상담가 정보가 담긴 딕셔너리 또는 None
     """
     query = text("SELECT * FROM public.counselor WHERE id = :id")
-    
+
     with engine.begin() as conn:
         result = conn.execute(query, {"id": counselor_id})
         row = result.fetchone()
 
         if row:
-            # 컬럼명과 매핑하여 딕셔너리로 반환
-            return {
-                'id': row[0],           
-                'name': row[1],         
-                'gender': row[2],       
-                'age': row[3],          
-                'mbti': row[4],         
-                'career': row[5],       
-                'personality': row[6],
-                'method': row[7],       
-                'tone': row[8],         
-                'specialty': row[9],    
-                'prompt': row[10],      
-            }
+            # SQLAlchemy Row 객체를 dict로 변환 (컬럼명 기준 매핑)
+            return dict(row._mapping)
         else:
             return None
 
