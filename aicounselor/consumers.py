@@ -346,9 +346,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     template="""
 {counselor_profile}
 
-상담가 고유 프롬프트:
-{counselor_prompt}
-
 시스템 지침:
 {system_prompt}
 
