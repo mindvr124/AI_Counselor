@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# uvicorn myproject.asgi:application --host 127.0.0.1 --port 8000 --reload
+# uvicorn server.asgi:application --host 127.0.0.1 --port 8000 --reload
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
