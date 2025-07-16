@@ -81,7 +81,7 @@ def ensure_user_exists(user_id):
 
         # 사용자가 없으면 생성
         if count == 0:
-            insert_user_query = text("INSERT INTO user (user_id) VALUES (:user_id)")
+            insert_user_query = text("INSERT INTO public.user (user_id) VALUES (:user_id)")
             conn.execute(insert_user_query, {
                 "user_id": user_id
             })
@@ -208,7 +208,7 @@ def save_counselor(counselor_data):
 # 모든 상담 내용 저장 함수
 #----------------------------------------------
 def save_counsel_history(user_id, user_input, answer):
-    query = text("INSERT INTO counsel_history (user_id, user_input, answer) VALUES (:user_id, :user_input, :answer)")
+    query = text("INSERT INTO public.counsel_history (user_id, user_input, answer) VALUES (:user_id, :user_input, :answer)")
     with engine.begin() as conn:  # 자동 commit 포함
         conn.execute(query, {
             "user_id": user_id,
@@ -222,7 +222,7 @@ def save_counsel_history(user_id, user_input, answer):
 def save_counsel_summary(user_id, content):
     if len(content) < 30:
         return 0
-    query = text("INSERT INTO counsel_summary (user_id, content) VALUES (:user_id, :content)")
+    query = text("INSERT INTO public.counsel_summary (user_id, content) VALUES (:user_id, :content)")
     with engine.begin() as conn:
         conn.execute(query, {
             "user_id": user_id,
@@ -337,7 +337,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 - 상담 방법: {self.counselor_info.get('method')}
 - 상담 톤: {self.counselor_info.get('tone')}
 - 전문 분야: {self.counselor_info.get('specialty')}
-- 프롬프트: {self.counselor_info.get('prompt')}
 """
 
                 # 프롬프트 템플릿 구성
