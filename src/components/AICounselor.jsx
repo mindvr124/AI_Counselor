@@ -318,40 +318,53 @@ const AICounselor = () => {
     }
   };
 
+  const [userId, setUserId] = useState('');
   // 채팅 메시지 전송 함수
   const sendMessage = () => {
     if (!inputMessage.trim() || isLoading || !socket || socket.readyState !== WebSocket.OPEN) return;
 
-    const userMessage = {
-      type: 'user',
-      content: inputMessage,
-      timestamp: new Date().toISOString(),
-      id: Date.now()
-    };
-    setMessages(prev => [...prev, userMessage]);
-
-    // 프롬프트 템플릿 변수 대체
-    const processedPrompt = systemPrompt
-      .replace('{name}', counselorInfo.name)
-      .replace('{gender}', counselorInfo.gender)
-      .replace('{age}', counselorInfo.age)
-      .replace('{mbti}', counselorInfo.mbti)
-      .replace('{career}', counselorInfo.career)
-      .replace('{personality}', counselorInfo.personality)
-      .replace('{method}', counselorInfo.method)
-      .replace('{tone}', counselorInfo.tone)
-      .replace('{specialty}', counselorInfo.specialty);
-
-    socket.send(JSON.stringify({
-      type: 'send_message',
-      message: inputMessage,
-      systemPrompt: processedPrompt,
-      apiSettings,
-      messageHistory: messages.slice(-10)
-    }));
-
-    setInputMessage('');
+  const userMessage = {
+    type: 'user',
+    content: inputMessage,
+    timestamp: new Date().toISOString(),
+    id: Date.now()
   };
+  setMessages(prev => [...prev, userMessage]);
+
+  // 프롬프트 템플릿 변수 대체
+  const processedPrompt = systemPrompt
+    .replace('{name}', counselorInfo.name)
+    .replace('{gender}', counselorInfo.gender)
+    .replace('{age}', counselorInfo.age)
+    .replace('{mbti}', counselorInfo.mbti)
+    .replace('{career}', counselorInfo.career)
+    .replace('{personality}', counselorInfo.personality)
+    .replace('{method}', counselorInfo.method)
+    .replace('{tone}', counselorInfo.tone)
+    .replace('{specialty}', counselorInfo.specialty);
+
+  socket.send(JSON.stringify({
+    type: 'send_message',
+    message: inputMessage,
+    user_id: userId, // 추가
+    systemPrompt: processedPrompt,
+    apiSettings,
+    //messageHistory: messages.slice(-10)
+  }));
+
+  setInputMessage('');
+};
+
+// ChatInput 컴포넌트에 userId props 추가
+<ChatInput
+  inputMessage={inputMessage}
+  setInputMessage={setInputMessage}
+  userId={userId}
+  setUserId={setUserId}
+  sendMessage={sendMessage}
+  isLoading={isLoading}
+  isConnected={isConnected}
+/>
 
   // 채팅 초기화 함수
   const resetChat = () => {
