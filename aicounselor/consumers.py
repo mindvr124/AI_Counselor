@@ -44,7 +44,7 @@ def load_counselor(counselor_id):
     Returns:
         dict: 상담가 정보가 담긴 딕셔너리 또는 None
     """
-    query = text("SELECT * FROM mindvr.counselor WHERE id = :id")
+    query = text("SELECT * FROM public.counselor WHERE id = :id")
     
     with engine.begin() as conn:
         result = conn.execute(query, {"id": counselor_id})
@@ -150,7 +150,7 @@ def save_counselor(counselor_data):
         if exist:
             # UPDATE 쿼리 - 필드 매핑 수정
             query = text("""
-                UPDATE mindvr.counselor
+                UPDATE public.counselor
                 SET 
                     name = :name,
                     gender = :gender,
@@ -167,7 +167,7 @@ def save_counselor(counselor_data):
         else:
             # INSERT 쿼리 - 필드 매핑 수정
             query = text("""
-                INSERT INTO mindvr.counselor (
+                INSERT INTO public.counselor (
                     id, name, gender, age, mbti, career, personality, method, tone, specialty, prompt
                 ) VALUES (
                     :id, :name, :gender, :age, :mbti, :career, :personality, :method, :tone, :specialty, :prompt
