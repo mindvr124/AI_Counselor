@@ -73,7 +73,7 @@ def load_counselor(counselor_id):
 # 사용자가 존재하는지 확인하는 함수
 #----------------------------------------------
 def ensure_user_exists(user_id):
-    check_query = text("SELECT COUNT(*) FROM user WHERE user_id = :user_id")
+    check_query = text("SELECT COUNT(*) FROM public.user WHERE user_id = :user_id")
     with engine.begin() as conn:
         result = conn.execute(check_query, {"user_id": user_id})
         count = result.scalar() # 첫 번째 행의 첫 번째 컬럼 값만 반환
@@ -93,7 +93,7 @@ def ensure_user_exists(user_id):
 def get_counsel_summary(user_id):
     query = text("""
         SELECT content 
-        FROM counsel_summary 
+        FROM public.counsel_summary 
         WHERE user_id = :user_id 
         ORDER BY id DESC 
         LIMIT 1
