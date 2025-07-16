@@ -13,19 +13,26 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # #############################################
 # DB 연결 설정
 # #############################################
-user = os.getenv("DB_USER")
-password = os.getenv("DB_PASSWORD")
-host = os.getenv("SERVER_HOST")
-port = "3306"
-database = os.getenv("DB_NAME")
+# user = os.getenv("DB_USER")
+# password = os.getenv("DB_PASSWORD")
+# host = os.getenv("SERVER_HOST")
+# port = "3306"
+# database = os.getenv("DB_NAME")
+
+# PostgreSQL용 환경 변수 가져오기 (Render에서 제공한 DATABASE_URL 사용)
+db_url = os.getenv("DATABASE_URL")
+
+# SQLAlchemy 엔진 생성
+engine = create_engine(db_url)
 
 # #############################################
 # DB Load 함수
 # #############################################
 # 엔진 생성
-engine = create_engine(
-        f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}?charset=utf8mb4"
-    )
+# engine = create_engine(
+#         f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}?charset=utf8mb4"
+#     )
+engine = create_engine(db_url)
 
 def load_counselor(counselor_id):
     """
