@@ -1,7 +1,9 @@
-// 프롬프트 탭 UI
-import React from 'react';
-
+import React, { useEffect } from 'react';
 const PromptEditor = ({ systemPrompt, setSystemPrompt }) => {
+  useEffect(() => {
+    console.log("PromptEditor에서 받은 systemPrompt:", systemPrompt);
+  }, [systemPrompt]);
+
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">시스템 프롬프트</label>

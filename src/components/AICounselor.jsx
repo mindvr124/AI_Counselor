@@ -107,12 +107,12 @@ const AICounselor = () => {
 
   const [counselorInfo, setCounselorInfo] = useState({
     id: '', name: '', gender: '', age: '',
-    personality: '', tone: '', specialty: '',
-    career: '', method: ''
+    mbti: '', career: '', personality: '', 
+    method: '', tone: '', specialty: '', prompt: ''
   });
 
   const [apiSettings, setApiSettings] = useState({
-    model: 'gpt-4', temperature: 0.7, maxTokens: 2000, topP: 1.0, stream: true
+    model: 'gpt-4o', temperature: 0.2, stream: true
   });
 
   const [systemPrompt, setSystemPrompt] = useState(`당신은 전문적인 AI 심리상담가입니다...`);
@@ -121,12 +121,19 @@ const AICounselor = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentStreamMessage, setCurrentStreamMessage] = useState('');
+  const [streamingMessageId, setStreamingMessageId] = useState(null); // 스트리밍 메시지 ID 추가
   const [activeTab, setActiveTab] = useState('info');
   const [isSaving, setIsSaving] = useState(false);
-  const [invalidId, setInvalidId] = useState(false); // counselor_info 로드 실패 시 사용
-  const [saveStatus, setSaveStatus] = useState({ show: false, type: '', message: '' }); // 저장 알림 상태
+  const [invalidId, setInvalidId] = useState(false);
+  const [saveStatus, setSaveStatus] = useState({ show: false, type: '', message: '' });
 
   const reconnectTimeoutRef = useRef(null);
+  const currentStreamMessageRef = useRef(''); // 최신 스트림 메시지 참조용
+
+  // currentStreamMessage 변경 시 ref 업데이트
+  useEffect(() => {
+    currentStreamMessageRef.current = currentStreamMessage;
+  }, [currentStreamMessage]);
 
   // WebSocket 연결 함수 및 로직 (모든 onmessage 처리 로직 포함)
   const connectWebSocket = () => {
@@ -136,13 +143,13 @@ const AICounselor = () => {
     }
     setConnectionStatus('connecting');
 
-    const ws = new WebSocket('ws://localhost:8000/ws/');
+    const ws = new WebSocket('ws://127.0.0.1:8000/ws/');
     
     ws.onopen = () => {
       console.log("WebSocket connection established.");
       setConnectionStatus('connected');
       setIsConnected(true);
-      setSocket(ws); // 상태 업데이트
+      setSocket(ws);
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
@@ -155,51 +162,85 @@ const AICounselor = () => {
 
       switch (data.type) {
         case 'counselor_info':
-          // 상담가 정보 로드 성공 시
-          setCounselorInfo(data.data || data.payload); // 백엔드 응답에 따라 'data' 또는 'payload' 사용
-          setInvalidId(false); // 유효한 ID이므로 경고 해제
-          // 상담 시작 메시지 초기화
-          setMessages([{
-            type: 'ai',
-            content: `안녕하세요! 저는 ${data.data?.name || data.payload?.name}입니다. 오늘은 어떤 이야기를 나누고 싶으신가요?`,
-            timestamp: new Date().toISOString()
-          }]);
+          const counselorData = data.data || data.payload;
+          console.log("받은 counselorData:", counselorData);
+          
+          const { prompt, ...counselorInfo } = counselorData;
+          console.log("분리된 prompt:", prompt);
+          console.log("prompt 타입:", typeof prompt);
+          console.log("prompt 길이:", prompt?.length);
+          
+          setCounselorInfo(counselorInfo);
+          
+          // prompt가 있으면 사용하고, 없으면 기본값으로 설정
+          const defaultPrompt = `당신은 전문적인 AI 심리상담가입니다...`;
+          
+          if (prompt && prompt.trim() !== '') {
+            console.log("프롬프트 설정 중:", prompt);
+            setSystemPrompt(prompt);
+          } else {
+            console.log("기본 프롬프트로 설정", defaultPrompt);
+            setSystemPrompt(defaultPrompt);
+          }
+          
           break;
+          
         case 'message_start':
           setIsLoading(true);
           setCurrentStreamMessage('');
+          const newStreamingId = Date.now();
+          setStreamingMessageId(newStreamingId);
           break;
+          
         case 'message_chunk':
           setCurrentStreamMessage(prev => prev + data.content);
           break;
+          
         case 'message_end':
           setIsLoading(false);
-          setMessages(prev => [...prev, {
-            type: 'ai', content: currentStreamMessage, timestamp: new Date().toISOString()
-          }]);
+          // ref를 사용하여 최신 스트림 메시지 가져오기
+          const finalMessage = currentStreamMessageRef.current;
+          if (finalMessage) {
+            setMessages(prev => [...prev, {
+              type: 'ai',
+              content: finalMessage,
+              timestamp: new Date().toISOString(),
+              id: streamingMessageId
+            }]);
+          }
+          // 스트리밍 관련 상태 초기화
           setCurrentStreamMessage('');
+          setStreamingMessageId(null);
           break;
+          
         case 'error':
-          // 서버에서 발생한 오류 처리 (로드 오류, 채팅 오류 등)
-          setIsLoading(false); // 혹시 채팅 로딩 중 오류가 났다면 로딩 상태 해제
-          if (data.message === "Counselor not found" || data.message?.includes("not found")) { // 백엔드의 오류 메시지 형식에 따라 조건 조정
-            setInvalidId(true); // 상담가 없음 경고 표시
+          setIsLoading(false);
+          setCurrentStreamMessage('');
+          setStreamingMessageId(null);
+          if (data.message === "Counselor not found" || data.message?.includes("not found")) {
+            setInvalidId(true);
             setSaveStatus({ show: true, type: 'error', message: '상담가 정보를 찾을 수 없습니다.' });
           } else {
             setMessages(prev => [...prev, {
-              type: 'ai', content: data.message || '오류가 발생했습니다.', timestamp: new Date().toISOString()
+              type: 'ai',
+              content: data.message || '오류가 발생했습니다.',
+              timestamp: new Date().toISOString(),
+              id: Date.now()
             }]);
             setSaveStatus({ show: true, type: 'error', message: `오류 발생: ${data.message || '알 수 없는 오류'}` });
           }
           break;
+          
         case 'save_success':
           setSaveStatus({ show: true, type: 'success', message: '상담가 정보가 성공적으로 저장되었습니다.' });
           setIsSaving(false);
           break;
+          
         case 'save_error':
           setSaveStatus({ show: true, type: 'error', message: '저장 실패: ' + data.message });
           setIsSaving(false);
           break;
+          
         default:
           console.warn("알 수 없는 메시지 타입:", data.type, data);
       }
@@ -209,15 +250,13 @@ const AICounselor = () => {
       console.log("WebSocket connection closed.");
       setConnectionStatus('disconnected');
       setIsConnected(false);
-      setSocket(null); // socket 상태를 null로 설정하여 재연결 트리거
-      // 자동 재연결 로직 (3초 후 시도)
+      setSocket(null);
       reconnectTimeoutRef.current = setTimeout(connectWebSocket, 3000);
     };
 
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
       setConnectionStatus('error');
-      // 오류 발생 시 재연결 시도 (onclose에서 이미 처리됨)
     };
   };
 
@@ -225,16 +264,14 @@ const AICounselor = () => {
   useEffect(() => {
     connectWebSocket();
     return () => {
-      // 언마운트 시 WebSocket 연결 정리
       if (socket && socket.readyState !== WebSocket.CLOSED) {
         socket.close();
       }
-      // 재연결 타임아웃이 있다면 해제
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, []); // 빈 의존성 배열로 컴포넌트 마운트 시 한 번만 실행
+  }, []);
 
   // 저장 알림 표시 시간 관리
   useEffect(() => {
@@ -246,7 +283,12 @@ const AICounselor = () => {
     }
   }, [saveStatus.show]);
 
-  // 상담가 정보 로드 함수 (WebSocket으로 요청 전송)
+  // 프롬프트 탭 컴포넌트에서
+  useEffect(() => {
+    console.log("systemPrompt 변경됨:", systemPrompt);
+  }, [systemPrompt]);
+
+  // 상담가 정보 로드 함수
   const loadCounselorInfo = (id) => {
     console.log("📢 loadCounselorInfo 호출됨, id =", id);
     if (!id) {
@@ -254,22 +296,25 @@ const AICounselor = () => {
       return;
     }
     if (socket?.readyState === WebSocket.OPEN) {
-      // 백엔드에서 load_counselor 요청을 'id' 파라미터로 받도록 해야 함
       socket.send(JSON.stringify({ type: 'load_counselor', id: id }));
     } else {
       setSaveStatus({ show: true, type: 'error', message: 'WebSocket이 연결되지 않았습니다. 잠시 후 다시 시도해주세요.' });
     }
   };
 
-  // 상담가 정보 저장 함수 (WebSocket으로 요청 전송)
+  // 상담가 정보 저장 함수
   const saveCounselorInfo = () => {
     if (socket?.readyState === WebSocket.OPEN) {
       setIsSaving(true);
-      // counselorInfo 객체를 백엔드로 전송
-      socket.send(JSON.stringify({ type: 'save_counselor', data: counselorInfo }));
+      // 백엔드 데이터베이스 구조에 맞게 데이터 전송
+      const counselorData = {
+        ...counselorInfo,
+        prompt: systemPrompt // 현재 시스템 프롬프트도 함께 저장
+      };
+      socket.send(JSON.stringify({ type: 'save_counselor', data: counselorData }));
     } else {
       setSaveStatus({ show: true, type: 'error', message: 'WebSocket이 연결되지 않았습니다. 상담가 정보를 저장할 수 없습니다.' });
-      setIsSaving(false); // 소켓 연결 안되면 저장 상태 해제
+      setIsSaving(false);
     }
   };
 
@@ -280,7 +325,8 @@ const AICounselor = () => {
     const userMessage = {
       type: 'user',
       content: inputMessage,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      id: Date.now()
     };
     setMessages(prev => [...prev, userMessage]);
 
@@ -289,18 +335,19 @@ const AICounselor = () => {
       .replace('{name}', counselorInfo.name)
       .replace('{gender}', counselorInfo.gender)
       .replace('{age}', counselorInfo.age)
-      .replace('{personality}', counselorInfo.personality)
-      .replace('{tone}', counselorInfo.tone)
-      .replace('{specialty}', counselorInfo.specialty)
+      .replace('{mbti}', counselorInfo.mbti)
       .replace('{career}', counselorInfo.career)
-      .replace('{method}', counselorInfo.method);
+      .replace('{personality}', counselorInfo.personality)
+      .replace('{method}', counselorInfo.method)
+      .replace('{tone}', counselorInfo.tone)
+      .replace('{specialty}', counselorInfo.specialty);
 
     socket.send(JSON.stringify({
       type: 'send_message',
       message: inputMessage,
       systemPrompt: processedPrompt,
       apiSettings,
-      messageHistory: messages.slice(-10) // 최근 10개 메시지 전송
+      messageHistory: messages.slice(-10)
     }));
 
     setInputMessage('');
@@ -310,10 +357,12 @@ const AICounselor = () => {
   const resetChat = () => {
     setMessages([{
       type: 'ai',
-      content: `안녕하세요! 저는 ${counselorInfo.name}입니다. 오늘은 어떤 이야기를 나누고 싶으신가요?`,
-      timestamp: new Date().toISOString()
+      content: `안녕하세요! 저는 ${counselorInfo.name}입니다. 저에게 이름을 알려주세요!`,
+      timestamp: new Date().toISOString(),
+      id: Date.now()
     }]);
     setCurrentStreamMessage('');
+    setStreamingMessageId(null);
   };
 
   return (
@@ -384,7 +433,12 @@ const AICounselor = () => {
       {/* 오른쪽 채팅 패널 */}
       <div className="flex-1 flex flex-col">
         <ChatHeader counselorInfo={counselorInfo} isConnected={isConnected} resetChat={resetChat} />
-        <ChatMessages messages={messages} isLoading={isLoading} currentStreamMessage={currentStreamMessage} />
+        <ChatMessages 
+          messages={messages} 
+          isLoading={isLoading} 
+          currentStreamMessage={currentStreamMessage}
+          streamingMessageId={streamingMessageId}
+        />
         <ChatInput
           inputMessage={inputMessage}
           setInputMessage={setInputMessage}

@@ -42,21 +42,6 @@ const ApiSettingsForm = ({ apiSettings, setApiSettings }) => {
         </div>
       </div>
 
-      {/* Max Tokens */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Max Tokens</label>
-        <input
-          type="number"
-          min="1"
-          max="4000"
-          value={apiSettings.maxTokens}
-          onChange={(e) =>
-            setApiSettings({ ...apiSettings, maxTokens: parseInt(e.target.value) })
-          }
-          className="w-full px-3 py-2 border border-gray-300 rounded-md"
-        />
-      </div>
-
       {/* 스트리밍 모드 */}
       <div>
         <label className="flex items-center">

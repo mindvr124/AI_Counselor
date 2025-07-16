@@ -1,8 +1,7 @@
-// 채팅 메세지 목록
 import React, { useEffect, useRef } from 'react';
 import { Bot } from 'lucide-react';
 
-const ChatMessages = ({ messages, currentStreamMessage, isLoading }) => {
+const ChatMessages = ({ messages, currentStreamMessage, isLoading, streamingMessageId }) => {
   const messagesEndRef = useRef(null);
 
   // 자동 스크롤
@@ -14,7 +13,7 @@ const ChatMessages = ({ messages, currentStreamMessage, isLoading }) => {
     <div className="flex-1 overflow-y-auto p-6 space-y-4">
       {messages.map((message, index) => (
         <div
-          key={index}
+          key={message.id || index}
           className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
         >
           <div
@@ -34,8 +33,8 @@ const ChatMessages = ({ messages, currentStreamMessage, isLoading }) => {
         </div>
       ))}
 
-      {/* 스트리밍 중인 메시지 */}
-      {currentStreamMessage && (
+      {/* 스트리밍 중인 메시지 - streamingMessageId가 있고 currentStreamMessage가 있을 때만 표시 */}
+      {currentStreamMessage && streamingMessageId && (
         <div className="flex justify-start">
           <div className="max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-gray-100 text-gray-800">
             <div className="flex items-start space-x-2">
@@ -46,7 +45,7 @@ const ChatMessages = ({ messages, currentStreamMessage, isLoading }) => {
         </div>
       )}
 
-      {/* 로딩 애니메이션 */}
+      {/* 로딩 애니메이션 - 스트리밍 메시지가 없을 때만 표시 */}
       {isLoading && !currentStreamMessage && (
         <div className="flex justify-start">
           <div className="bg-gray-100 rounded-lg px-4 py-2">
