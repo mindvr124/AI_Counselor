@@ -333,23 +333,23 @@ const AICounselor = () => {
 
   // 프롬프트 템플릿 변수 대체
   const processedPrompt = systemPrompt
-    .replace('{name}', counselorInfo.name)
-    .replace('{gender}', counselorInfo.gender)
-    .replace('{age}', counselorInfo.age)
-    .replace('{mbti}', counselorInfo.mbti)
-    .replace('{career}', counselorInfo.career)
-    .replace('{personality}', counselorInfo.personality)
-    .replace('{method}', counselorInfo.method)
-    .replace('{tone}', counselorInfo.tone)
-    .replace('{specialty}', counselorInfo.specialty);
+    .replace('{name}', counselorInfo.name || '')
+    .replace('{gender}', counselorInfo.gender || '')
+    .replace('{age}', counselorInfo.age || '')
+    .replace('{mbti}', counselorInfo.mbti || '')
+    .replace('{career}', counselorInfo.career || '')
+    .replace('{personality}', counselorInfo.personality || '')
+    .replace('{method}', counselorInfo.method || '')
+    .replace('{tone}', counselorInfo.tone || '')
+    .replace('{specialty}', counselorInfo.specialty || '');
 
   socket.send(JSON.stringify({
     type: 'send_message',
     message: inputMessage,
-    user_id: userId, // 추가
+    user_id: userId,
+    counselor_id: counselorInfo.id, // 상담가 ID 추가
     systemPrompt: processedPrompt,
-    apiSettings,
-    //messageHistory: messages.slice(-10)
+    apiSettings
   }));
 
   setInputMessage('');
