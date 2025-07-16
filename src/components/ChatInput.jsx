@@ -20,7 +20,7 @@ const ChatInput = ({ inputMessage, setInputMessage, userId, setUserId, sendMessa
 
   // 버튼 클릭 시에도 포커스 유지
   const handleSendClick = () => {
-    sendMessage();
+    sendMessage(userId);
     
     // 메시지 전송 후 포커스 유지
     setTimeout(() => {

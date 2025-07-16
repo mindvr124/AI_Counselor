@@ -458,6 +458,7 @@ const AICounselor = () => {
           sendMessage={sendMessage}
           isLoading={isLoading}
           isConnected={isConnected}
+          userId={userId}
         />
       </div>
     </div>
