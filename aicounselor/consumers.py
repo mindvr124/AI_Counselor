@@ -207,13 +207,14 @@ def save_counselor(counselor_data):
 #----------------------------------------------
 # 모든 상담 내용 저장 함수
 #----------------------------------------------
-def save_counsel_history(user_id, user_input, answer):
-    query = text("INSERT INTO public.counsel_history (user_id, user_input, answer) VALUES (:user_id, :user_input, :answer)")
+def save_counsel_history(user_id, user_input, answer, counselor_id):
+    query = text("INSERT INTO public.counsel_history (user_id, user_input, answer, counselor_id) VALUES (:user_id, :user_input, :answer, :counselor_id)")
     with engine.begin() as conn:  # 자동 commit 포함
         conn.execute(query, {
             "user_id": user_id,
             "user_input": user_input,
-            "answer": answer
+            "answer": answer,
+            "counselor_id": counselor_id
         })
 
 #----------------------------------------------
@@ -298,22 +299,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             # 메시지 전송 처리
             elif msg_type == "send_message":
+                user_id = data.get("user_id")
                 user_input = data.get("message")
                 model = data.get("apiSettings", {}).get("model", "gpt-4o")
                 temperature = data.get("apiSettings", {}).get("temperature", 0.2)
                 system_prompt = data.get("systemPrompt", "")
                 message_history = data.get("messageHistory", [])
                 
-                # 임시 user_id (실제로는 인증에서 가져와야 함)
-                self.user_id = "test_user"
-                
-                ensure_user_exists(self.user_id)
+                ensure_user_exists(user_id)
                 
                 # 메시지 시작 알림
                 await self.send(text_data=json.dumps({"type": "message_start"}))
                 
                 # 이전 요약 가져오기
-                summary_data = get_counsel_summary(self.user_id)
+                summary_data = get_counsel_summary(user_id)
                 
                 # 대화 기록 구성
                 history = ""
@@ -397,7 +396,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "user": user_input,
                     "response": response_text.content,
                 })
-                save_counsel_history(self.user_id, user_input, response_text.content)
+                save_counsel_history(self.user_id, user_input, response_text.content, self.counselor_info.id)
                 
                 # 5개 메시지마다 요약 생성
                 if len(self.chat_history) % 5 == 0:
