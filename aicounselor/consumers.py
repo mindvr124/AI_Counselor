@@ -278,7 +278,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         "message": "해당 ID의 상담를 찾을 수 없습니다."
                     }))
                 return
-
+            
             # 메시지 전송 처리
             elif msg_type == "send_message":
                 user_id = data.get("user_id")
@@ -372,13 +372,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 
                 # 메시지 종료 알림
                 await self.send(text_data=json.dumps({"type": "message_end"}))
-                
+                load_counselor_id = self.counselor_info.get('id')
                 # 대화 기록 저장
                 self.chat_history.append({
                     "user": user_input,
                     "response": response_text.content,
                 })
-                save_counsel_history(self.user_id, user_input, response_text.content, self.counselor_info["id"])
+                save_counsel_history(self.user_id, user_input, response_text.content, load_counselor_id)
                 
                 # 5개 메시지마다 요약 생성
                 if len(self.chat_history) % 5 == 0:
