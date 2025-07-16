@@ -143,7 +143,7 @@ const AICounselor = () => {
     }
     setConnectionStatus('connecting');
 
-    const ws = new WebSocket('ws://127.0.0.1:8000/ws/');
+    const ws = new WebSocket('wss://ai-counselor-backend.onrender.com/ws/');
     
     ws.onopen = () => {
       console.log("WebSocket connection established.");
