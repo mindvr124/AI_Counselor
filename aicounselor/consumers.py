@@ -46,16 +46,17 @@ def load_counselor(counselor_id):
         if row:
             # 컬럼명과 매핑하여 딕셔너리로 반환
             return {
-                'id': row[0],           # id
-                'name': row[1],         # name (이름)
-                'gender': row[2],       # gender (성별)
-                'age': row[3],          # age_group (나이) - 클라이언트에서 age로 사용
-                'personality': row[4],  # mbti (성격) - 클라이언트에서 personality로 사용
-                'career': row[5],       # career (경력)
-                'tone': row[6],         # personality (맞춤) - 클라이언트에서 tone으로 사용
-                'method': row[7],       # method (전문 분야)
-                'specialty': row[8],    # tone (생담 방법) - 클라이언트에서 specialty로 사용
-                'prompt': row[9],       # prompt 
+                'id': row[0],           
+                'name': row[1],         
+                'gender': row[2],       
+                'age': row[3],          
+                'mbti': row[4],         
+                'career': row[5],       
+                'personality': row[6],
+                'method': row[7],       
+                'tone': row[8],         
+                'specialty': row[9],    
+                'prompt': row[10],      
             }
         else:
             return None
@@ -140,28 +141,29 @@ def save_counselor(counselor_data):
         exist = load_counselor(counselor_data['id'])
         
         if exist:
-            # UPDATE 쿼리
+            # UPDATE 쿼리 - 필드 매핑 수정
             query = text("""
                 UPDATE mindvr.counselor
                 SET 
                     name = :name,
                     gender = :gender,
-                    age_group = :age,
-                    mbti = :personality,
+                    age = :age,
+                    mbti = :mbti,
                     career = :career,
-                    personality = :tone,
+                    personality = :personality,
                     method = :method,
-                    tone = :specialty,
+                    tone = :tone,
+                    specialty = :specialty,
                     prompt = :prompt
                 WHERE id = :id
             """)
         else:
-            # INSERT 쿼리
+            # INSERT 쿼리 - 필드 매핑 수정
             query = text("""
                 INSERT INTO mindvr.counselor (
-                    id, name, gender, age_group, mbti, career, personality, method, tone, prompt
+                    id, name, gender, age, mbti, career, personality, method, tone, specialty, prompt
                 ) VALUES (
-                    :id, :name, :gender, :age, :personality, :career, :tone, :method, :specialty, prompt
+                    :id, :name, :gender, :age, :mbti, :career, :personality, :method, :tone, :specialty, :prompt
                 )
             """)
 
@@ -170,13 +172,14 @@ def save_counselor(counselor_data):
                 "id": counselor_data['id'],
                 "name": counselor_data['name'],
                 "gender": counselor_data['gender'],
-                "age": counselor_data['age'],           # age -> age_group
-                "personality": counselor_data['personality'],  # personality -> mbti
+                "age": counselor_data['age'],      # 정확한 필드명
+                "mbti": counselor_data['mbti'],                # 정확한 필드명
                 "career": counselor_data['career'],
-                "tone": counselor_data['tone'],         # tone -> personality
+                "personality": counselor_data['personality'],  # 정확한 필드명
                 "method": counselor_data['method'],
-                "specialty": counselor_data['specialty'],  # specialty -> tone
-                "prompt": counselor_data['prompt']
+                "tone": counselor_data['tone'],                # 정확한 필드명
+                "specialty": counselor_data['specialty'],      # 정확한 필드명
+                "prompt": counselor_data['prompt']             # 프롬프트 필드
             })
 
         return {
@@ -239,6 +242,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.summary_text = ""
         self.user_id = None
         self.llm = None
+        self.counselor_info = None  # 상담가 정보 저장
 
     async def connect(self):
         await self.accept()
@@ -271,6 +275,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 print(f"📋 결과 타입: {type(counselor_info)}")
                 
                 if counselor_info is not None:  # 더 명확한 None 체크
+                    self.counselor_info = counselor_info  # 상담가 정보 저장
                     print("✅ 상담가 정보 전송")
                     await self.send(text_data=json.dumps({
                         "type": "counselor_info",
@@ -311,21 +316,48 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     elif msg['type'] == 'ai':
                         history += f"상담가: {msg['content']}\n"
                 
+                # 상담가 정보 문자열 구성
+                counselor_profile = ""
+                if self.counselor_info:
+                    counselor_profile = f"""
+상담가 정보:
+- 이름: {self.counselor_info.get('name')}
+- 성별: {self.counselor_info.get('gender')}
+- 연령대: {self.counselor_info.get('age')}
+- MBTI: {self.counselor_info.get('mbti')}
+- 경력: {self.counselor_info.get('career')}
+- 성격: {self.counselor_info.get('personality')}
+- 상담 방법: {self.counselor_info.get('method')}
+- 상담 톤: {self.counselor_info.get('tone')}
+- 전문 분야: {self.counselor_info.get('specialty')}
+- 프롬프트: {self.counselor_info.get('prompt')}
+"""
+
                 # 프롬프트 템플릿 구성
                 prompt_template = PromptTemplate(
-                    input_variables=["system", "summary", "history", "user_input"],
+                    input_variables=["counselor_profile", "system_prompt", "summary_memory", "recent_history", "user_input"],
                     template="""
-                    {system}
-                    
-                    이전 상담 요약:
-                    {summary}
-                    
-                    최근 대화:
-                    {history}
-                    
-                    사용자: {user_input}
-                    상담가:
-                    """
+{counselor_profile}
+
+상담가 고유 프롬프트:
+{counselor_prompt}
+
+시스템 지침:
+{system_prompt}
+
+=== 요약 메모리 (이전 상담 세션들의 요약) ===
+{summary_memory}
+
+=== 최근 대화 히스토리 ===
+{recent_history}
+
+사용자: {user_input}
+
+위의 상담가 정보를 바탕으로 해당 상담가의 성격, 경력, MBTI, 상담 방법, 톤, 전문 분야를 모두 반영하여 응답하세요.
+상담가 고유 프롬프트와 시스템 지침을 준수하고, 요약 메모리의 내용을 참고하여 일관성 있는 상담을 제공하며, 최근 대화의 맥락을 이어가세요.
+
+상담가:
+"""
                 )
                 
                 # 스트리밍 콜백 생성
@@ -335,9 +367,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 
                 # 응답 생성 태스크 시작
                 response_task = asyncio.create_task(chain.ainvoke({
-                    "system": system_prompt,
-                    "summary": summary_data or "",
-                    "history": history,
+                    "counselor_profile": counselor_profile,
+                    "system_prompt": system_prompt,
+                    "summary_memory": summary_data or "이전 상담 기록이 없습니다.",
+                    "recent_history": history if history else "대화 시작",
                     "user_input": user_input
                 }))
                 
