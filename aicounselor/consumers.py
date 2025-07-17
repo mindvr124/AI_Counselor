@@ -326,14 +326,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
 - 직업: {self.counselor_info.get('job')}
 - 경력: {self.counselor_info.get('career')}
 - 전문 분야: {self.counselor_info.get('specialty')}
-- 주요 상담 연령대: {self.counselor_info.get('clientAgeFocus')}
+- 주요 상담 연령대: {self.counselor_info.get('client_age_focus')}
 - 성격: {self.counselor_info.get('personality')}
 - 말투: {self.counselor_info.get('tone')}
 - 특징: {self.counselor_info.get('feature')}
 - 상담 방법: {self.counselor_info.get('method')}
 - 배경 이야기: {self.counselor_info.get('backstroy')}
 - 취미: {self.counselor_info.get('hobby')}
-- 한 줄 소개: {self.counselor_info.get('shortIntro')}
+- 한 줄 소개: {self.counselor_info.get('short_intro')}
 """
 
                 # 프롬프트 템플릿 구성
