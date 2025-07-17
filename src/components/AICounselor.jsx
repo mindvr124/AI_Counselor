@@ -455,10 +455,11 @@ const AICounselor = () => {
         <ChatInput
           inputMessage={inputMessage}
           setInputMessage={setInputMessage}
+          userId={userId}
+          setUserId={setUserId}
           sendMessage={sendMessage}
           isLoading={isLoading}
           isConnected={isConnected}
-          userId={userId}
         />
       </div>
     </div>

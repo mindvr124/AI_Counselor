@@ -1,9 +1,19 @@
-// 메세지 입력창
 import React, { useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 
 const ChatInput = ({ inputMessage, setInputMessage, userId, setUserId, sendMessage, isLoading, isConnected }) => {
   const textareaRef = useRef(null);
+
+  // 디버깅: props 확인
+  useEffect(() => {
+    console.log('ChatInput Props:', {
+      inputMessage,
+      userId,
+      setUserId: typeof setUserId,
+      isLoading,
+      isConnected
+    });
+  }, [inputMessage, userId, setUserId, isLoading, isConnected]);
 
   // Enter 키 입력 처리
   const handleKeyPress = (e) => {
@@ -11,24 +21,36 @@ const ChatInput = ({ inputMessage, setInputMessage, userId, setUserId, sendMessa
       e.preventDefault();
       sendMessage();
       
-      // 메시지 전송 후 포커스 유지
       setTimeout(() => {
         textareaRef.current?.focus();
       }, 0);
     }
   };
 
-  // 버튼 클릭 시에도 포커스 유지
+  // 안전한 userId 변경 핸들러
+  const handleUserIdChange = (e) => {
+    console.log('handleUserIdChange 호출됨:', e.target.value);
+    console.log('setUserId 타입:', typeof setUserId);
+    
+    if (setUserId && typeof setUserId === 'function') {
+      try {
+        setUserId(e.target.value);
+      } catch (error) {
+        console.error('setUserId 에러:', error);
+      }
+    } else {
+      console.error('setUserId가 함수가 아님:', setUserId);
+    }
+  };
+
   const handleSendClick = () => {
     sendMessage(userId);
     
-    // 메시지 전송 후 포커스 유지
     setTimeout(() => {
       textareaRef.current?.focus();
     }, 0);
   };
 
-  // 컴포넌트 마운트 시 포커스
   useEffect(() => {
     if (isConnected && !isLoading) {
       textareaRef.current?.focus();
@@ -43,12 +65,18 @@ const ChatInput = ({ inputMessage, setInputMessage, userId, setUserId, sendMessa
           <label className="text-xs text-gray-500 mb-1">ID 입력</label>
           <input
             type="text"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
+            value={userId || ''}
+            onChange={handleUserIdChange}
             placeholder="사용자 ID"
             className="w-24 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
             disabled={isLoading || !isConnected}
+            onFocus={() => console.log('ID 입력창 포커스됨')}
+            onBlur={() => console.log('ID 입력창 포커스 해제됨')}
           />
+          {/* 디버깅 정보 표시 */}
+          <div className="text-xs text-red-500 mt-1">
+            상태: {isLoading ? 'loading' : ''} {!isConnected ? 'disconnected' : 'connected'}
+          </div>
         </div>
         
         {/* 메시지 입력창 */}
