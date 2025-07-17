@@ -135,14 +135,19 @@ def save_counselor(counselor_data):
                 UPDATE public.counselor
                 SET 
                     name = :name,
-                    gender = :gender,
                     age = :age,
-                    mbti = :mbti,
-                    career = :career,
+                    gender = :gender,
+                    job = :job,
                     personality = :personality,
-                    method = :method,
                     tone = :tone,
+                    feature = :feature,
+                    short_intro = :short_intro,
                     specialty = :specialty,
+                    client_age_focus,
+                    method = :method,
+                    career = :career,
+                    backstory = :backstory,
+                    hobby = :hobby,                
                     prompt = :prompt
                 WHERE id = :id
             """)
@@ -150,9 +155,9 @@ def save_counselor(counselor_data):
             # INSERT 쿼리 - 필드 매핑 수정
             query = text("""
                 INSERT INTO public.counselor (
-                    id, name, gender, age, mbti, career, personality, method, tone, specialty, prompt
+                    id, name, age, gender, job, personality, tone, feature, short_intro, specialty, client_age_focus, method, career, backstory, hobby, prompt
                 ) VALUES (
-                    :id, :name, :gender, :age, :mbti, :career, :personality, :method, :tone, :specialty, :prompt
+                    :id, :name, :age, :gender, :job, :personality, :tone, :feature, :short_intro, :specialty, :client_age_focus, :method, :career, :backstory, :hobby, :prompt
                 )
             """)
 
@@ -160,15 +165,20 @@ def save_counselor(counselor_data):
             result = conn.execute(query, {
                 "id": counselor_data['id'],
                 "name": counselor_data['name'],
+                "age": counselor_data['age'],
                 "gender": counselor_data['gender'],
-                "age": counselor_data['age'],      # 정확한 필드명
-                "mbti": counselor_data['mbti'],                # 정확한 필드명
-                "career": counselor_data['career'],
-                "personality": counselor_data['personality'],  # 정확한 필드명
+                "job": counselor_data['job'],
+                "personality": counselor_data['personality'],                   
+                "tone": counselor_data['tone'],
+                "feature": counselor_data['feature'],
+                "short_intro": counselor_data['short_intro'],
+                "specialty": counselor_data['specialty'],
+                "client_age_focus": counselor_data['client_age_focus'],
                 "method": counselor_data['method'],
-                "tone": counselor_data['tone'],                # 정확한 필드명
-                "specialty": counselor_data['specialty'],      # 정확한 필드명
-                "prompt": counselor_data['prompt']             # 프롬프트 필드
+                "career": counselor_data['career'],
+                "backstory": counselor_data['backstory'],
+                "hobby": counselor_data['hobby'],                     
+                "prompt": counselor_data['prompt']             
             })
 
         return {
@@ -312,13 +322,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
 상담가 정보:
 - 이름: {self.counselor_info.get('name')}
 - 성별: {self.counselor_info.get('gender')}
-- 연령대: {self.counselor_info.get('age')}
-- MBTI: {self.counselor_info.get('mbti')}
+- 나이: {self.counselor_info.get('age')}
+- 직업: {self.counselor_info.get('job')}
 - 경력: {self.counselor_info.get('career')}
-- 성격: {self.counselor_info.get('personality')}
-- 상담 방법: {self.counselor_info.get('method')}
-- 상담 톤: {self.counselor_info.get('tone')}
 - 전문 분야: {self.counselor_info.get('specialty')}
+- 주요 상담 연령대: {self.counselor_info.get('clientAgeFocus')}
+- 성격: {self.counselor_info.get('personality')}
+- 말투: {self.counselor_info.get('tone')}
+- 특징: {self.counselor_info.get('feature')}
+- 상담 방법: {self.counselor_info.get('method')}
+- 배경 이야기: {self.counselor_info.get('backstroy')}
+- 취미: {self.counselor_info.get('hobby')}
+- 한 줄 소개: {self.counselor_info.get('shortIntro')}
 """
 
                 # 프롬프트 템플릿 구성
@@ -338,7 +353,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
 사용자: {user_input}
 
-위의 상담가 정보를 바탕으로 해당 상담가의 성격, 경력, MBTI, 상담 방법, 톤, 전문 분야를 모두 반영하여 응답하세요.
+위의 상담가 정보를 바탕으로 해당 상담가의 정보를 모두 반영하여 응답하세요.
 상담가 고유 프롬프트와 시스템 지침을 준수하고, 요약 메모리의 내용을 참고하여 일관성 있는 상담을 제공하며, 최근 대화의 맥락을 이어가세요.
 
 상담가:
