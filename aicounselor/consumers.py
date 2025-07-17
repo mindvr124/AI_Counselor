@@ -331,7 +331,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             - 말투: {self.counselor_info.get('tone')}
             - 특징: {self.counselor_info.get('feature')}
             - 상담 방법: {self.counselor_info.get('method')}
-            - 배경 이야기: {self.counselor_info.get('backstroy')}
+            - 배경 이야기: {self.counselor_info.get('backstory')}
             - 취미: {self.counselor_info.get('hobby')}
             - 한 줄 소개: {self.counselor_info.get('short_intro')}
             """
