@@ -143,7 +143,7 @@ def save_counselor(counselor_data):
                     feature = :feature,
                     short_intro = :short_intro,
                     specialty = :specialty,
-                    client_age_focus,
+                    client_age_focus = :client_age_focus,
                     method = :method,
                     career = :career,
                     backstory = :backstory,
