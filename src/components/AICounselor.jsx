@@ -340,12 +340,12 @@ const AICounselor = () => {
     .replace('{personality}', counselorInfo.personality || '')
     .replace('{tone}', counselorInfo.tone || '')
     .replace('{feature}', counselorInfo.feature || '')
-    .replace('{short_intro}', counselorInfo.short_intro || '')
+    .replace('{short_intro}', counselorInfo.shortIntro || '')
     .replace('{specialty}', counselorInfo.specialty || '')
-    .replace('{client_age_focus}', counselorInfo.client_age_focus || '')
+    .replace('{client_age_focus}', counselorInfo.clientAgeFocus || '')
     .replace('{method}', counselorInfo.method || '')
     .replace('{career}', counselorInfo.career || '')
-    .replace('{backstory}', counselorInfo.backstroy || '')
+    .replace('{backstory}', counselorInfo.backstory || '')
     .replace('{hobby}', counselorInfo.hobby || '');
     
 

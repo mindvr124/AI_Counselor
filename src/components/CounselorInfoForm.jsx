@@ -106,8 +106,8 @@ const CounselorInfoForm = ({ counselorInfo, setCounselorInfo, loadCounselorInfo,
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">배경 이야기</label>
         <textarea
-          value={counselorInfo.backstroy || ''}
-          onChange={(e) => setCounselorInfo({ ...counselorInfo, backstroy: e.target.value })}
+          value={counselorInfo.backstory || ''}
+          onChange={(e) => setCounselorInfo({ ...counselorInfo, backstory: e.target.value })}
           rows="2"
           className="w-full px-3 py-2 border border-gray-300 rounded-md"
           placeholder="예: 어릴 적 가정 폭력을 겪음, 큰 사고를 당해 신체적/정신적 후유증이 있음."
