@@ -167,8 +167,8 @@ const CounselorInfoForm = ({ counselorInfo, setCounselorInfo, loadCounselorInfo,
           <label className="block text-sm font-medium text-gray-700 mb-1">주요 상담 연령대</label>
           <input
             type="text"
-            value={counselorInfo.clientAgeFocus || ''}
-            onChange={(e) => setCounselorInfo({ ...counselorInfo, clientAgeFocus: e.target.value })}
+            value={counselorInfo.client_age_focus || ''}
+            onChange={(e) => setCounselorInfo({ ...counselorInfo, client_age_focus: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
             placeholder="예: 청소년, 어린이, 성인, 노인"
           />
@@ -191,8 +191,8 @@ const CounselorInfoForm = ({ counselorInfo, setCounselorInfo, loadCounselorInfo,
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">한 줄 소개</label>
         <textarea
-          value={counselorInfo.shortIntro || ''}
-          onChange={(e) => setCounselorInfo({ ...counselorInfo, shortIntro: e.target.value })}
+          value={counselorInfo.short_intro || ''}
+          onChange={(e) => setCounselorInfo({ ...counselorInfo, short_intro: e.target.value })}
           rows="3"
           className="w-full px-3 py-2 border border-gray-300 rounded-md"
           placeholder="예: 불안한 마음을 편안하게 다독이는 엄마 같은 상담가 #정서적지지 #심리안정 #편안한상담"
