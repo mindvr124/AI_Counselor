@@ -288,14 +288,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 temperature = data.get("apiSettings", {}).get("temperature", 0.2)
                 system_prompt = data.get("systemPrompt", "")
                 message_history = data.get("messageHistory", [])
-                
-                ensure_user_exists(user_id)
+                print("신규 사용자 여부를 확인합니다.",self.user_id)
+                ensure_user_exists(self.user_id)
                 
                 # 메시지 시작 알림
                 await self.send(text_data=json.dumps({"type": "message_start"}))
                 
                 # 이전 요약 가져오기
-                summary_data = get_counsel_summary(user_id)
+                summary_data = get_counsel_summary(self.user_id)
                 
                 # 대화 기록 구성
                 history = ""
