@@ -106,9 +106,9 @@ const AICounselor = () => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
   const [counselorInfo, setCounselorInfo] = useState({
-    id: '', name: '', gender: '', age: '',
-    mbti: '', career: '', personality: '', 
-    method: '', tone: '', specialty: '', prompt: ''
+    id: '', name: '', age: '', gender: '', job: '', personality: '',
+    tone: '', feature: '', short_intro: '', specialty: '', client_age_focus: '',
+    method: '', career: '', backstory: '', hobby: '', prompt: ''
   });
 
   const [apiSettings, setApiSettings] = useState({
@@ -334,14 +334,20 @@ const AICounselor = () => {
   // 프롬프트 템플릿 변수 대체
   const processedPrompt = systemPrompt
     .replace('{name}', counselorInfo.name || '')
-    .replace('{gender}', counselorInfo.gender || '')
     .replace('{age}', counselorInfo.age || '')
-    .replace('{mbti}', counselorInfo.mbti || '')
-    .replace('{career}', counselorInfo.career || '')
+    .replace('{gender}', counselorInfo.gender || '')
+    .replace('{job}', counselorInfo.job || '')
     .replace('{personality}', counselorInfo.personality || '')
-    .replace('{method}', counselorInfo.method || '')
     .replace('{tone}', counselorInfo.tone || '')
-    .replace('{specialty}', counselorInfo.specialty || '');
+    .replace('{feature}', counselorInfo.feature || '')
+    .replace('{short_intro}', counselorInfo.short_intro || '')
+    .replace('{specialty}', counselorInfo.specialty || '')
+    .replace('{client_age_focus}', counselorInfo.client_age_focus || '')
+    .replace('{method}', counselorInfo.method || '')
+    .replace('{career}', counselorInfo.career || '')
+    .replace('{backstory}', counselorInfo.backstroy || '')
+    .replace('{hobby}', counselorInfo.hobby || '');
+    
 
   socket.send(JSON.stringify({
     type: 'send_message',
@@ -381,7 +387,7 @@ const AICounselor = () => {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* 왼쪽 패널 */}
-      <div className="w-96 bg-white shadow-lg border-r border-gray-200 flex flex-col">
+      <div className="w-[28rem] bg-white shadow-lg border-r border-gray-200 flex flex-col">
         {/* 연결 상태 및 탭 */}
         <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
           <ConnectionStatus status={connectionStatus} />
