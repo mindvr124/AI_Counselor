@@ -117,20 +117,15 @@ def generate_summary(llm, history, summary_text):
 # DB Save 함수
 # #############################################
 def save_counselor(counselor_data):
-    """
-    상담가 정보를 저장하는 함수
-
-    Args:
-        counselor_data (dict): 상담가 정보가 담긴 딕셔너리
-
-    Returns:
-        dict: 저장 결과 정보가 담긴 딕셔너리 또는 Fail
-    """
     try:
+        # 디버깅: 저장하려는 데이터 출력
+        print(f"저장하려는 데이터: {counselor_data}")
+        print(f"short_intro: {counselor_data.get('short_intro', 'NOT_FOUND')}")
+        print(f"client_age_focus: {counselor_data.get('client_age_focus', 'NOT_FOUND')}")
+        
         exist = load_counselor(counselor_data['id'])
         
         if exist:
-            # UPDATE 쿼리 - 필드 매핑 수정
             query = text("""
                 UPDATE public.counselor
                 SET 
@@ -152,7 +147,6 @@ def save_counselor(counselor_data):
                 WHERE id = :id
             """)
         else:
-            # INSERT 쿼리 - 필드 매핑 수정
             query = text("""
                 INSERT INTO public.counselor (
                     id, name, age, gender, job, personality, tone, feature, short_intro, specialty, client_age_focus, method, career, backstory, hobby, prompt
@@ -164,21 +158,21 @@ def save_counselor(counselor_data):
         with engine.begin() as conn:
             result = conn.execute(query, {
                 "id": counselor_data['id'],
-                "name": counselor_data['name'],
-                "age": counselor_data['age'],
-                "gender": counselor_data['gender'],
-                "job": counselor_data['job'],
-                "personality": counselor_data['personality'],                   
-                "tone": counselor_data['tone'],
-                "feature": counselor_data['feature'],
-                "short_intro": counselor_data['short_intro'],
-                "specialty": counselor_data['specialty'],
-                "client_age_focus": counselor_data['client_age_focus'],
-                "method": counselor_data['method'],
-                "career": counselor_data['career'],
-                "backstory": counselor_data['backstory'],
-                "hobby": counselor_data['hobby'],                     
-                "prompt": counselor_data['prompt']             
+                "name": counselor_data.get('name', ''),
+                "age": counselor_data.get('age', ''),
+                "gender": counselor_data.get('gender', ''),
+                "job": counselor_data.get('job', ''),
+                "personality": counselor_data.get('personality', ''),                   
+                "tone": counselor_data.get('tone', ''),
+                "feature": counselor_data.get('feature', ''),
+                "short_intro": counselor_data.get('short_intro', ''),
+                "specialty": counselor_data.get('specialty', ''),
+                "client_age_focus": counselor_data.get('client_age_focus', ''),
+                "method": counselor_data.get('method', ''),
+                "career": counselor_data.get('career', ''),
+                "backstory": counselor_data.get('backstory', ''),
+                "hobby": counselor_data.get('hobby', ''),                     
+                "prompt": counselor_data.get('prompt', '')             
             })
 
         return {
