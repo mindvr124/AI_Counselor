@@ -9,7 +9,7 @@ const ChatHeader = ({ counselorInfo, isConnected, resetChat }) => {
         {/* 상담사 정보 */}
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
-            {counselorInfo.id ? (
+            {counselorInfo?.id ? (
               <img 
                 src={`/images/counselors/${counselorInfo.id}.png`} 
                 alt={counselorInfo.name || '상담가'}
@@ -18,14 +18,16 @@ const ChatHeader = ({ counselorInfo, isConnected, resetChat }) => {
             ) : (
               <User className="w-5 h-5 text-blue-600" />
             )}
+
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-800">
-              {counselorInfo.name || '상담가'}
+              {counselorInfo?.name || '상담가'}
             </h2>
             <p className="text-sm text-gray-500">
-              {isConnected ? '온라인' : '오프라인'} • {counselorInfo.specialty || '심리상담'}
+              {isConnected ? '온라인' : '오프라인'} • {counselorInfo?.specialty || '심리상담'}
             </p>
+
           </div>
         </div>
 

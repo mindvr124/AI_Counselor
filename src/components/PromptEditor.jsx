@@ -2,7 +2,11 @@ import React, { useEffect } from 'react';
 const PromptEditor = ({ systemPrompt, setSystemPrompt }) => {
   useEffect(() => {
     console.log("PromptEditor에서 받은 systemPrompt:", systemPrompt);
-  }, [systemPrompt]);
+    // ai_prompt가 비어있으면 기본값 설정
+    if (!systemPrompt) {
+      setSystemPrompt('당신은 전문적인 AI 심리상담가입니다...');
+    }
+  }, [systemPrompt, setSystemPrompt]);
 
   return (
     <div>
