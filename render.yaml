@@ -2,7 +2,10 @@ services:
   - type: web
     name: langflow-json-api
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      rm -rf ~/.cargo ~/.rustup
+      pip install --upgrade pip
+      pip install -r requirements.txt
     startCommand: python app.py
     envVars:
       - key: OPENAI_API_KEY
