@@ -38,6 +38,10 @@ class ChatRequest(BaseModel):
     user_id: Optional[str] = "anonymous"
     session_id: Optional[str] = None
     counselor_info: Optional[Dict[str, Any]] = None
+    
+    class Config:
+        # 추가 필드 허용
+        extra = "allow"
 
 class ChatResponse(BaseModel):
     response: str
@@ -52,12 +56,31 @@ async def root():
 async def health_check():
     return {"status": "healthy", "service": "langflow-api"}
 
+@app.post("/api/v1/debug")
+async def debug_request(request: dict):
+    """디버깅용 엔드포인트 - 받은 요청 데이터를 그대로 반환"""
+    return {
+        "received_data": request,
+        "message": "디버그 요청이 성공적으로 처리되었습니다."
+    }
+
 @app.post("/api/v1/run", response_model=ChatResponse)
 async def run_langflow_workflow(request: ChatRequest):
     """
     Langflow JSON 워크플로우를 실행합니다.
     """
     try:
+        # 요청 데이터 검증 및 로깅
+        print(f"받은 요청 데이터: {request}")
+        print(f"메시지: {request.message}")
+        print(f"사용자 ID: {request.user_id}")
+        print(f"세션 ID: {request.session_id}")
+        print(f"상담가 정보: {request.counselor_info}")
+        
+        # 메시지 검증
+        if not request.message or request.message.strip() == "":
+            raise HTTPException(status_code=422, detail="메시지가 비어있습니다.")
+        
         # OpenAI API 키 확인
         openai_api_key = os.getenv("OPENAI_API_KEY")
         if not openai_api_key:
@@ -83,7 +106,10 @@ async def run_langflow_workflow(request: ChatRequest):
             session_id=session_id
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"예상치 못한 오류: {str(e)}")
         raise HTTPException(status_code=500, detail=f"워크플로우 실행 중 오류: {str(e)}")
 
 def build_system_prompt(counselor_info: Optional[Dict[str, Any]]) -> str:
