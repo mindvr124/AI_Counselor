@@ -130,7 +130,6 @@ const AICounselor = () => {
     try {
       setConnectionStatus('connecting');
       
-      console.log('🔍 서버 연결 확인 중: /');
       const response = await fetch('/', {
         method: 'GET',
         headers: {
@@ -139,10 +138,8 @@ const AICounselor = () => {
       });
       
       if (response.ok) {
-        console.log('✅ 서버 연결 성공');
         setConnectionStatus('connected');
       } else {
-        console.log('❌ 서버 연결 실패');
         setConnectionStatus('error');
       }
       
@@ -176,7 +173,7 @@ const AICounselor = () => {
     if (token && !userInfo) {
       getUserInfoByToken(token)
         .then((res) => {
-          console.log('📥 사용자 정보 응답:', res.data);
+    
           // API 응답 구조에 맞게 사용자 정보 추출
           const userData = res.data.data?.user || res.data.data || res.data;
           setUserInfo(userData);
@@ -201,7 +198,7 @@ const AICounselor = () => {
   // 상담가 정보가 변경될 때 채팅 리셋
   useEffect(() => {
     if (counselorInfo.id && messages.length > 0) {
-      console.log('🔄 상담가 변경됨 - 채팅 리셋');
+
       resetChat();
     }
   }, [counselorInfo.id]); // 상담가 ID가 변경될 때만 실행
@@ -223,7 +220,7 @@ const AICounselor = () => {
     setMessages(prev => [...prev, userMessageObj]);
 
     try {
-      console.log('🚀 Langflow로 메시지 전송:', userMessage);
+
       
       // Langflow API로 메시지 전송
       const response = await sendMessageToLangflow({
@@ -233,27 +230,22 @@ const AICounselor = () => {
       });
 
       // AI 응답 처리
-      console.log('🔍 응답 파싱 시작:', response.data);
       let aiResponse = '';
       
-      if (response.data && response.data.outputs) {
-        console.log('📋 outputs 구조:', response.data.outputs);
+      if (response.data && response.data.response) {
+        aiResponse = response.data.response;
+      } else if (response.data && response.data.outputs) {
         const outputs = response.data.outputs;
         if (outputs.length > 0 && outputs[0].outputs && outputs[0].outputs.length > 0) {
           aiResponse = outputs[0].outputs[0].results.message.text || '응답을 받을 수 없습니다.';
-          console.log('✅ 파싱된 응답:', aiResponse);
         } else {
-          console.log('❌ outputs 구조가 예상과 다름');
           aiResponse = '응답을 받을 수 없습니다.';
         }
       } else if (response.data && response.data.message) {
         aiResponse = response.data.message;
-        console.log('✅ message 필드에서 응답:', aiResponse);
       } else if (response.data && response.data.text) {
         aiResponse = response.data.text;
-        console.log('✅ text 필드에서 응답:', aiResponse);
       } else {
-        console.log('❌ 응답 구조를 찾을 수 없음:', response.data);
         aiResponse = '응답을 받을 수 없습니다.';
       }
 
@@ -290,22 +282,17 @@ const AICounselor = () => {
     
     // 세션 리셋을 위한 더미 메시지 전송 (선택사항)
     // Langflow에서 세션을 완전히 리셋하려면 별도의 API 호출이 필요할 수 있음
-    console.log('🔄 채팅 리셋됨 - 새로운 세션 시작');
+
   };
 
   const loadCounselorInfo = async (id) => {
     try {
       const res = await fetchCounselorById(id);
-      console.log("📥 상담가 응답 도착:", res.data);
-      console.log("📥 상담가 데이터 구조:", res.data.data);
-
       // API 응답 구조에 따라 데이터 설정
       const counselorData = res.data.data || res.data;
-      console.log("📥 설정할 상담가 데이터:", counselorData);
 
       setCounselorInfo(prev => {
         const newData = { ...prev, ...counselorData };
-        console.log("📥 최종 상담가 상태:", newData);
         return newData;
       });
 
@@ -331,9 +318,7 @@ const AICounselor = () => {
       } catch (updateError) {
         // 404 에러일 경우 새 상담가 생성
         if (updateError.response && updateError.response.status === 404) {
-          console.log('🆕 상담가가 존재하지 않습니다. 새로 생성합니다.');
           const createRes = await createCounselor({ id, ...payload });
-          console.log("✅ 새 상담가 생성 성공:", createRes.data);
           setSaveStatus({ show: true, type: 'success', message: '새 상담가가 생성되었습니다.' });
         } else {
           throw updateError;
@@ -351,7 +336,7 @@ const AICounselor = () => {
     setIsLoggedIn(true);
     try {
       const res = await getUserInfoByToken(token);
-      console.log('📥 로그인 후 사용자 정보:', res.data);
+
       // API 응답 구조에 맞게 사용자 정보 추출
       const userData = res.data.data?.user || res.data.data || res.data;
       setUserInfo(userData);
