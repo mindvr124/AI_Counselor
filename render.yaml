@@ -8,6 +8,6 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: LANGFLOW_WORKFLOW_PATH
-        value: Memory Chatbot LLM.json
+        value: workflow.json
       - key: PORT
         value: $PORT 
