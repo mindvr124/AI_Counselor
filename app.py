@@ -6,6 +6,8 @@ import os
 from typing import Dict, Any, Optional
 import requests
 from dotenv import load_dotenv
+from langflow import load_flow_from_json
+from langflow.schema import Message
 
 load_dotenv()
 
@@ -20,17 +22,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Langflow JSON 워크플로우 로드
+# Langflow 워크플로우 인스턴스
+langflow_flow = None
+
 def load_langflow_workflow():
-    """Langflow JSON 워크플로우를 로드합니다."""
+    """Langflow JSON 워크플로우를 로드하고 실행 가능한 플로우로 변환합니다."""
+    global langflow_flow
     workflow_path = os.getenv("LANGFLOW_WORKFLOW_PATH", "workflow.json")
     try:
         with open(workflow_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            workflow_data = json.load(f)
+        
+        # Langflow 플로우 로드
+        langflow_flow = load_flow_from_json(workflow_data)
+        return langflow_flow
     except FileNotFoundError:
         raise FileNotFoundError(f"워크플로우 파일을 찾을 수 없습니다: {workflow_path}")
     except json.JSONDecodeError:
         raise ValueError("잘못된 JSON 형식입니다.")
+    except Exception as e:
+        raise Exception(f"Langflow 워크플로우 로드 실패: {str(e)}")
 
 # 요청 모델
 class ChatRequest(BaseModel):
@@ -86,103 +97,78 @@ async def run_langflow_workflow(request: ChatRequest):
         if not openai_api_key:
             raise HTTPException(status_code=500, detail="OpenAI API 키가 설정되지 않았습니다.")
         
-        # 워크플로우 로드
-        workflow = load_langflow_workflow()
+        # Langflow 워크플로우 로드 (한 번만)
+        global langflow_flow
+        if langflow_flow is None:
+            langflow_flow = load_langflow_workflow()
         
-        # 상담가 정보 처리
-        system_prompt = build_system_prompt(request.counselor_info)
-        
-        # OpenAI API 호출
-        response = await call_openai_api(
-            message=request.message,
-            system_prompt=system_prompt,
-            api_key=openai_api_key
-        )
-        
+        # 세션 ID 설정
         session_id = request.session_id or f"{request.user_id}_{hash(request.message)}"
         
+        # Langflow 메시지 생성
+        langflow_message = Message(
+            text=request.message,
+            session_id=session_id,
+            sender="user"
+        )
+        
+        # 상담가 정보를 메시지 속성에 추가
+        if request.counselor_info:
+            langflow_message.properties = {
+                "counselor_info": request.counselor_info
+            }
+        
+        # Langflow 워크플로우 실행
+        print(f"Langflow 워크플로우 실행 중... 세션 ID: {session_id}")
+        result = await langflow_flow.arun(
+            message=langflow_message,
+            session_id=session_id
+        )
+        
+        # 결과에서 응답 추출
+        if hasattr(result, 'text'):
+            response_text = result.text
+        elif isinstance(result, dict) and 'text' in result:
+            response_text = result['text']
+        elif isinstance(result, str):
+            response_text = result
+        else:
+            response_text = str(result)
+        
+        print(f"Langflow 응답: {response_text}")
+        
         return ChatResponse(
-            response=response,
+            response=response_text,
             session_id=session_id
         )
         
     except HTTPException:
         raise
     except Exception as e:
-        print(f"예상치 못한 오류: {str(e)}")
+        print(f"Langflow 워크플로우 실행 중 오류: {str(e)}")
         raise HTTPException(status_code=500, detail=f"워크플로우 실행 중 오류: {str(e)}")
 
-def build_system_prompt(counselor_info: Optional[Dict[str, Any]]) -> str:
-    """상담가 정보를 바탕으로 시스템 프롬프트를 생성합니다."""
-    if not counselor_info:
-        return "당신은 도움이 되는 AI 어시스턴트입니다."
-    
-    prompt = ""
-    
-    # 기본 AI 프롬프트
-    if counselor_info.get('ai_prompt'):
-        prompt += counselor_info['ai_prompt'] + '\n\n'
-    
-    # 상담가 정보 추가
-    prompt += '=== 상담가 정보 ===\n'
-    if counselor_info.get('name'): prompt += f"이름: {counselor_info['name']}\n"
-    if counselor_info.get('age'): prompt += f"나이: {counselor_info['age']}\n"
-    if counselor_info.get('gender'): prompt += f"성별: {counselor_info['gender']}\n"
-    if counselor_info.get('job'): prompt += f"직업: {counselor_info['job']}\n"
-    if counselor_info.get('personality'): prompt += f"성격: {counselor_info['personality']}\n"
-    if counselor_info.get('speaking_style'): prompt += f"말투: {counselor_info['speaking_style']}\n"
-    if counselor_info.get('feature'): prompt += f"특징: {counselor_info['feature']}\n"
-    if counselor_info.get('summary'): prompt += f"요약: {counselor_info['summary']}\n"
-    if counselor_info.get('specialties'): prompt += f"전문분야: {counselor_info['specialties']}\n"
-    if counselor_info.get('main_age_group'): prompt += f"주요 연령대: {counselor_info['main_age_group']}\n"
-    if counselor_info.get('counseling_method'): prompt += f"상담 방법: {counselor_info['counseling_method']}\n"
-    if counselor_info.get('career'): prompt += f"경력: {counselor_info['career']}\n"
-    if counselor_info.get('background'): prompt += f"배경: {counselor_info['background']}\n"
-    if counselor_info.get('hobby'): prompt += f"취미: {counselor_info['hobby']}\n"
-    
-    # 최종 지시사항
-    if counselor_info.get('name'):
-        prompt += f'\n=== 최종 지시사항 ===\n'
-        prompt += f'- 당신의 이름은 "{counselor_info["name"]}"입니다.\n'
-        prompt += f'- 다른 이름으로 소개하지 마세요.\n'
-        prompt += f'- 위의 상담가 정보를 정확히 따르세요.\n'
-        prompt += f'- 반드시 "{counselor_info["name"]}"로 소개하세요.\n'
-    
-    return prompt
-
-async def call_openai_api(message: str, system_prompt: str, api_key: str) -> str:
-    """OpenAI API를 호출합니다."""
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    
-    data = {
-        "model": "gpt-4o-mini",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": message}
-        ],
-        "temperature": 0.2,
-        "max_tokens": 1000
-    }
-    
+# Langflow 워크플로우 초기화 함수
+def initialize_langflow():
+    """애플리케이션 시작 시 Langflow 워크플로우를 초기화합니다."""
     try:
-        response = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=30
-        )
-        response.raise_for_status()
-        
-        result = response.json()
-        return result["choices"][0]["message"]["content"]
-        
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI API 호출 실패: {str(e)}")
+        global langflow_flow
+        langflow_flow = load_langflow_workflow()
+        print("Langflow 워크플로우가 성공적으로 로드되었습니다.")
+    except Exception as e:
+        print(f"Langflow 워크플로우 초기화 실패: {str(e)}")
+        raise e
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 7860))
+    
+    # Langflow 워크플로우 초기화
+    try:
+        initialize_langflow()
+    except Exception as e:
+        print(f"Langflow 초기화 실패: {str(e)}")
+        print("애플리케이션을 시작할 수 없습니다.")
+        exit(1)
+    
     uvicorn.run(app, host="0.0.0.0", port=port) 
