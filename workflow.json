@@ -1697,7 +1697,7 @@
   "id": "e49427ea-f75d-4ff9-871e-e1b4e8ec9704",
   "is_component": false,
   "last_tested_version": "1.5.0",
-  "name": "Memory Chatbot LLM (1)",
+  "name": "workflow",
   "tags": [
     "chatbots",
     "openai",
