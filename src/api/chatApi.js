@@ -4,7 +4,7 @@ import axios from 'axios';
 // Langflow API 설정
 const LANGFLOW_URL = process.env.REACT_APP_LANGFLOW_URL;
 const LANGFLOW_API_KEY = process.env.REACT_APP_LANGFLOW_API_KEY;
-
+console.log('✅ LANGFLOW_URL:', LANGFLOW_URL);
 export const sendMessageToLangflow = async ({ user_id, message, counselorInfo }) => {
   try {    
     console.log('🚀 Langflow로 메시지 전송:', { user_id, message });
