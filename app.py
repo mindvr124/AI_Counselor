@@ -16,7 +16,7 @@ app = FastAPI(title="Langflow API", version="1.0.0")
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://ai-counselor-langflow-frontend.onrender.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -162,6 +162,7 @@ def initialize_langflow():
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 7860))
+<<<<<<< HEAD
     
     # Langflow 워크플로우 초기화
     try:
@@ -172,3 +173,6 @@ if __name__ == "__main__":
         exit(1)
     
     uvicorn.run(app, host="0.0.0.0", port=port) 
+=======
+    uvicorn.run(app, host="0.0.0.0", port=port) 
+>>>>>>> da4e1804e6b313348558eded2dd6609622b039f8
